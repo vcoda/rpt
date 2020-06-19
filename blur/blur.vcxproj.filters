@@ -24,9 +24,15 @@
     <ClCompile Include="blurApp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="bezierMesh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="vkApp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="bezierMesh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
