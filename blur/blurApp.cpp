@@ -11,6 +11,9 @@ class BlurApp : public VkApp
     std::shared_ptr<magma::DescriptorSetLayout> teapotDescriptorSetLayout;
     std::shared_ptr<magma::DescriptorSet> teapotDescriptorSet;
 
+    std::shared_ptr<magma::PipelineLayout> teapotPipelineLayout;
+    std::shared_ptr<magma::GraphicsPipeline> teapotPipeline;
+
 public:
     BlurApp(HINSTANCE instance, HWND wnd, uint32_t width, uint32_t height):
         VkApp(instance, wnd, width, height)
@@ -18,6 +21,7 @@ public:
         createTeapotMesh();
         createUniformBuffers();
         createDescriptorSets();
+        createTeapotPipeline();
 
         int i = 0;
         for (auto& cmdBuffer : commandBuffers)
@@ -78,6 +82,30 @@ private:
         const VkShaderStageFlagBits stage = module->getReflection()->getShaderStage();
         const char *const entrypoint = module->getReflection()->getEntryPointName(0);
         return magma::PipelineShaderStage(stage, std::move(module), entrypoint);
+    }
+
+    void createTeapotPipeline()
+    {
+        teapotPipelineLayout = std::make_shared<magma::PipelineLayout>(teapotDescriptorSetLayout);
+        teapotPipeline = std::make_shared<magma::GraphicsPipeline>(device,
+            std::vector<magma::PipelineShaderStage>{
+                loadShader("shaders/transform.o"),
+                loadShader("shaders/teapot.o")
+            },
+            mesh->getVertexInput(),
+            magma::renderstates::triangleList,
+            magma::renderstates::fillCullBackCCW,
+            magma::renderstates::dontMultisample,
+            magma::renderstates::depthLessOrEqual,
+            magma::renderstates::dontBlendRgb,
+            std::initializer_list<VkDynamicState>{
+                VK_DYNAMIC_STATE_VIEWPORT,
+                VK_DYNAMIC_STATE_SCISSOR
+            },
+            teapotPipelineLayout,
+            renderPass, 0,
+            pipelineCache,
+            nullptr, nullptr, 0);
     }
 
     virtual void onRender(uint32_t bufferIndex) override
