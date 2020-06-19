@@ -49,5 +49,8 @@
     <CustomBuild Include="shaders\checkerboard.frag">
       <Filter>Resource Files</Filter>
     </CustomBuild>
+    <CustomBuild Include="shaders\blur.frag">
+      <Filter>Resource Files</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>
