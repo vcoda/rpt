@@ -112,7 +112,7 @@ private:
             },
             mesh->getVertexInput(),
             magma::renderstates::triangleList,
-            magma::renderstates::fillCullBackCCW,
+            magma::renderstates::fillCullBackCW,
             magma::renderstates::dontMultisample,
             magma::renderstates::depthLessOrEqual,
             magma::renderstates::dontBlendRgb,
