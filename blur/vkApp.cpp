@@ -1,4 +1,5 @@
 #include <sstream>
+#include <fstream>
 #include <iostream>
 #include "vkApp.h"
 
@@ -273,6 +274,25 @@ VkFormat VkApp::getSupportedDepthFormat(std::shared_ptr<magma::PhysicalDevice> p
             return format;
     }
     return VK_FORMAT_UNDEFINED;
+}
+
+magma::PipelineShaderStage VkApp::loadShader(const char *fileName) const
+{
+    std::ifstream file(fileName, std::ios::in | std::ios::binary);
+    if (!file.is_open())
+        throw std::runtime_error("file \"" + std::string(fileName) + "\" not found");
+
+    std::vector<char> bytecode((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    if (bytecode.size() % sizeof(magma::SpirvWord))
+        throw std::runtime_error("size of \"" + std::string(fileName) + "\" bytecode must be a multiple of SPIR-V word");
+
+    std::shared_ptr<magma::ShaderModule> module = std::make_shared<magma::ShaderModule>(device,
+        reinterpret_cast<const magma::SpirvWord *>(bytecode.data()), bytecode.size(),
+        0, 0, true, device->getAllocator());
+
+    const VkShaderStageFlagBits stage = module->getReflection()->getShaderStage();
+    const char *const entrypoint = module->getReflection()->getEntryPointName(0);
+    return magma::PipelineShaderStage(stage, std::move(module), entrypoint);
 }
 
 bool VkApp::submitCommandBuffer(uint32_t bufferIndex)

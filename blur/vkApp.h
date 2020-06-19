@@ -18,6 +18,7 @@ public:
 
 protected:
     virtual void onRender(uint32_t bufferIndex) = 0;
+    magma::PipelineShaderStage loadShader(const char *fileName) const;
     bool submitCommandBuffer(uint32_t bufferIndex);
     VkFormat getSupportedDepthFormat(std::shared_ptr<magma::PhysicalDevice> physicalDevice,
         bool hasStencil, bool optimalTiling);
