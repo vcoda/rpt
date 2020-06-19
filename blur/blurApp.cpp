@@ -1,5 +1,6 @@
 #include "vkApp.h"
 #include "bezierMesh.h"
+#include "../gliml/gliml.h"
 
 class BlurApp : public VkApp
 {
@@ -115,6 +116,23 @@ private:
         // Framebuffer defines render pass, color/depth/stencil image views and dimensions
         fb.framebuffer = std::shared_ptr<magma::Framebuffer>(new magma::Framebuffer(
             fb.renderPass, {fb.colorView, fb.depthView}));
+    }
+
+    VkFormat bcFormat(const gliml::context& ctx)
+    {
+        const int internalFormat = ctx.image_internal_format();
+        switch (internalFormat)
+        {
+        case GLIML_GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
+            return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
+        case GLIML_GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
+            return VK_FORMAT_BC2_UNORM_BLOCK;
+        case GLIML_GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+            return VK_FORMAT_BC3_UNORM_BLOCK;
+        default:
+            throw std::invalid_argument("unknown block compressed format");
+            return VK_FORMAT_UNDEFINED;
+        }
     }
 
     void createQuadMesh()
