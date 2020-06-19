@@ -2,6 +2,21 @@
 #include <iostream>
 #include "vkApp.h"
 
+#ifndef _WIN64
+void *VkApp::operator new(size_t size)
+{
+    void *ptr = _mm_malloc(size, 16);
+    if (!ptr)
+        throw std::bad_alloc();
+    return ptr;
+}
+
+void VkApp::operator delete(void *ptr) noexcept
+{
+    _mm_free(ptr);
+}
+#endif // _WIN64
+
 VkApp::VkApp(HINSTANCE instance, HWND wnd, uint32_t width, uint32_t height):
     width(width),
     height(height)

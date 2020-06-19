@@ -5,6 +5,12 @@
 class VkApp
 {
 public:
+#ifndef _WIN64
+    // For 16-byte alignment in heap
+    void *operator new(size_t size);
+    void operator delete(void *ptr) noexcept;
+#endif
+
     VkApp(HINSTANCE instance, HWND wnd, uint32_t width, uint32_t height);
     virtual ~VkApp();
     void render();
