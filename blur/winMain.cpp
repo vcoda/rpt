@@ -1,9 +1,12 @@
 #include <memory>
 #include <string>
-#include <Windows.h>
+#include "vkApp.h"
+
+std::unique_ptr<VkApp> createVulkanApp(HINSTANCE, HWND, uint32_t, uint32_t);
 
 namespace
 {
+std::unique_ptr<VkApp> vkApp;
 bool quit = false;
 
 void onError(const std::string& msg, const char *caption)
@@ -50,6 +53,7 @@ LRESULT WINAPI wndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         break;
 #ifndef _DEBUG
     case WM_PAINT:
+        vkApp->render();
         break;
 #endif
     case WM_CLOSE:
@@ -84,6 +88,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
         NULL, NULL, wc.hInstance, NULL);
 
     showWindow(wnd, style, width, height);
+    vkApp = createVulkanApp(hInstance, wnd, width, height);
 
     while (!quit)
     {
@@ -97,10 +102,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
         {
             if (!IsIconic(wnd))
             {
+                vkApp->render();
             }
         }
     }
 
+    vkApp.reset();
     DestroyWindow(wnd);
     UnregisterClass(className, hInstance);
     return 0;
