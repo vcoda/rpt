@@ -13,6 +13,7 @@ class BlurApp : public VkApp
     std::shared_ptr<magma::DescriptorSet> teapotDescriptorSet;
 
     std::shared_ptr<magma::PipelineLayout> teapotPipelineLayout;
+    std::shared_ptr<magma::GraphicsPipeline> checkerboardPipeline;
     std::shared_ptr<magma::GraphicsPipeline> teapotPipeline;
 
 public:
@@ -23,6 +24,7 @@ public:
         createTeapotMesh();
         createUniformBuffers();
         createDescriptorSets();
+        createCheckerboardPipeline();
         createTeapotPipeline();
         recordCommandBuffer(0);
         recordCommandBuffer(1);
@@ -100,6 +102,29 @@ private:
         const VkShaderStageFlagBits stage = module->getReflection()->getShaderStage();
         const char *const entrypoint = module->getReflection()->getEntryPointName(0);
         return magma::PipelineShaderStage(stage, std::move(module), entrypoint);
+    }
+
+    void createCheckerboardPipeline()
+    {
+        checkerboardPipeline = std::make_shared<magma::GraphicsPipeline>(device,
+            std::vector<magma::PipelineShaderStage>{
+                loadShader("shaders/passthrough.o"),
+                loadShader("shaders/checkerboard.o")
+            },
+            magma::renderstates::pos2f,
+            magma::renderstates::triangleStrip,
+            magma::renderstates::fillCullNoneCW,
+            magma::renderstates::dontMultisample,
+            magma::renderstates::depthAlwaysDontWrite,
+            magma::renderstates::dontBlendRgb,
+            std::initializer_list<VkDynamicState>{
+                VK_DYNAMIC_STATE_VIEWPORT,
+                VK_DYNAMIC_STATE_SCISSOR
+            },
+            nullptr,
+            renderPass, 0,
+            pipelineCache,
+            nullptr, nullptr, 0);
     }
 
     void createTeapotPipeline()
