@@ -1,3 +1,4 @@
+#include <fstream>
 #include "vkApp.h"
 #include "bezierMesh.h"
 #include "../gliml/gliml.h"
@@ -13,6 +14,12 @@ class BlurApp : public VkApp
         std::shared_ptr<magma::RenderPass> renderPass;
         std::shared_ptr<magma::Framebuffer> framebuffer;
     } fb;
+
+    struct Texture
+    {
+        std::shared_ptr<magma::Image2D> image;
+        std::shared_ptr<magma::ImageView> imageView;
+    } texture;
 
     std::unique_ptr<BezierPatchMesh> mesh;
     rapid::matrix viewProj;
@@ -44,6 +51,7 @@ public:
         VkApp(instance, wnd, width, height)
     {
         createFramebuffer();
+        loadTexture("textures/brick.dds");
         createQuadMesh();
         createTeapotMesh();
         createUniformBuffers();
@@ -133,6 +141,42 @@ private:
             throw std::invalid_argument("unknown block compressed format");
             return VK_FORMAT_UNDEFINED;
         }
+    }
+
+    void loadTexture(const std::string& filename)
+    {
+        std::ifstream file(filename, std::ios::in | std::ios::binary | std::ios::ate);
+        if (!file.is_open())
+            throw std::runtime_error("failed to open file \"" + filename + "\"");
+        const std::streamoff size = file.tellg();
+        file.seekg(0, std::ios::beg);
+        gliml::context ctx;
+        VkDeviceSize baseMipOffset = 0;
+        std::shared_ptr<magma::SrcTransferBuffer> buffer = std::make_shared<magma::SrcTransferBuffer>(device, size);
+        magma::helpers::mapScoped<uint8_t>(buffer, [&](uint8_t *data)
+        {   // Read data to buffer
+            file.read(reinterpret_cast<char *>(data), size);
+            file.close();
+            ctx.enable_dxt(true);
+            if (!ctx.load(data, static_cast<unsigned>(size)))
+                throw std::runtime_error("failed to load DDS texture");
+            // Skip DDS header
+            baseMipOffset = reinterpret_cast<const uint8_t *>(ctx.image_data(0, 0)) - data;
+        });
+        // Setup texture data description
+        const VkFormat format = bcFormat(ctx);
+        const VkExtent2D extent = {ctx.image_width(0, 0), ctx.image_height(0, 0)};
+        magma::Image::MipmapLayout mipOffsets(1, 0);
+        for (int level = 1; level < ctx.num_mipmaps(0); ++level)
+        {   // Compute relative offset
+            const intptr_t mipOffset = (const uint8_t *)ctx.image_data(0, level) - (const uint8_t *)ctx.image_data(0, level - 1);
+            mipOffsets.push_back(mipOffset);
+        }
+        // Upload texture data from buffer
+        magma::Image::CopyLayout bufferLayout{baseMipOffset, 0, 0};
+        texture.image = std::make_shared<magma::Image2D>(cmdImageCopy, format, extent, buffer, mipOffsets, bufferLayout);
+        // Create image view for shader
+        texture.imageView = std::make_shared<magma::ImageView>(texture.image);
     }
 
     void createQuadMesh()
