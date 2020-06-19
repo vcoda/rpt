@@ -24,20 +24,14 @@ public:
         createUniformBuffers();
         createDescriptorSets();
         createTeapotPipeline();
+        recordCommandBuffer(0);
+        recordCommandBuffer(1);
+    }
 
-        int i = 0;
-        for (auto& cmdBuffer : commandBuffers)
-        {
-            cmdBuffer->begin();
-            {
-                constexpr magma::ClearColor clearColor(0.35f, 0.53f, 0.7f, 1.0f);
-                cmdBuffer->beginRenderPass(renderPass, framebuffers[i],
-                    {clearColor}); // Set our clear color
-                cmdBuffer->endRenderPass();
-            }
-            cmdBuffer->end();
-            ++i;
-        }
+    void onRender(uint32_t bufferIndex) override
+    {
+        updatePerspectiveTransform();
+        submitCommandBuffer(bufferIndex);
     }
 
 private:
@@ -132,14 +126,26 @@ private:
             nullptr, nullptr, 0);
     }
 
-    virtual void onRender(uint32_t bufferIndex) override
-    {   // Submit commant buffer for execution
-        queue->submit(
-            commandBuffers[bufferIndex],
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            presentFinished,
-            renderFinished,
-            waitFences[bufferIndex]);
+    void recordCommandBuffer(uint32_t index)
+    {
+        std::shared_ptr<magma::CommandBuffer> cmdBuffer = commandBuffers[index];
+        cmdBuffer->begin();
+        {
+            cmdBuffer->beginRenderPass(renderPass, framebuffers[index],
+                {
+                    magma::clears::grayColor,
+                    magma::clears::depthOne
+                });
+            {
+                cmdBuffer->setViewport(0, 0, width, height);
+                cmdBuffer->setScissor(0, 0, width, height);
+                cmdBuffer->bindDescriptorSet(teapotPipeline, teapotDescriptorSet);
+                cmdBuffer->bindPipeline(teapotPipeline);
+                mesh->draw(cmdBuffer);
+            }
+            cmdBuffer->endRenderPass();
+        }
+        cmdBuffer->end();
     }
 };
 
