@@ -20,6 +20,7 @@ class BlurApp : public VkApp
     std::shared_ptr<magma::VertexBuffer> quad;
 
     std::shared_ptr<magma::UniformBuffer<rapid::matrix>> uniformTransform;
+    std::shared_ptr<magma::Sampler> textureSampler;
     std::shared_ptr<magma::DescriptorPool> descriptorPool;
     std::shared_ptr<magma::DescriptorSetLayout> teapotDescriptorSetLayout;
     std::shared_ptr<magma::DescriptorSet> teapotDescriptorSet;
@@ -36,6 +37,7 @@ public:
         createQuadMesh();
         createTeapotMesh();
         createUniformBuffers();
+        createTextureSampler();
         createDescriptorSets();
         createCheckerboardPipeline();
         createTeapotPipeline();
@@ -115,6 +117,11 @@ private:
     void createUniformBuffers()
     {
         uniformTransform = std::make_shared<magma::UniformBuffer<rapid::matrix>>(device);
+    }
+
+    void createTextureSampler()
+    {
+        textureSampler = std::make_shared<magma::Sampler>(device, magma::samplers::magMinMipNearestClampToEdge);
     }
 
     void createDescriptorSets()
