@@ -10,15 +10,15 @@ layout(binding = 0) uniform Transforms
 };
 
 layout(location = 0) out vec3 oNormal;
-
-out gl_PerVertex
-{
+layout(location = 1) out vec2 oTexCoord;
+out gl_PerVertex {
     vec4 gl_Position;
 };
 
 void main()
 {
     oNormal = normal;
+    oTexCoord = texCoord;
     gl_Position = worldViewProj * position;
     gl_Position.y = -gl_Position.y;
 }

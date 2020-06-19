@@ -213,13 +213,17 @@ private:
         descriptorPool = std::shared_ptr<magma::DescriptorPool>(new magma::DescriptorPool(device, maxDescriptorSets,
             {
                 oneUniformBuffer,
-                oneImageSampler
+                magma::descriptors::CombinedImageSampler(2)
             }));
 
         teapotDescriptorSetLayout = std::make_shared<magma::DescriptorSetLayout>(device,
-            magma::bindings::VertexStageBinding(0, oneUniformBuffer));
+            std::initializer_list<magma::DescriptorSetLayout::Binding>{
+                magma::bindings::VertexStageBinding(0, oneUniformBuffer),
+                magma::bindings::FragmentStageBinding(1, oneImageSampler)
+            });
         teapotDescriptorSet = descriptorPool->allocateDescriptorSet(teapotDescriptorSetLayout);
         teapotDescriptorSet->update(0, uniformTransform);
+        teapotDescriptorSet->update(1, texture.imageView, textureSampler);
         teapotPipelineLayout = std::make_shared<magma::PipelineLayout>(teapotDescriptorSetLayout);
 
         blurDescriptorSetLayout = std::make_shared<magma::DescriptorSetLayout>(device,
