@@ -21,13 +21,23 @@ class BlurApp : public VkApp
 
     std::shared_ptr<magma::UniformBuffer<rapid::matrix>> uniformTransform;
     std::shared_ptr<magma::Sampler> textureSampler;
+
     std::shared_ptr<magma::DescriptorPool> descriptorPool;
+
     std::shared_ptr<magma::DescriptorSetLayout> teapotDescriptorSetLayout;
     std::shared_ptr<magma::DescriptorSet> teapotDescriptorSet;
-
     std::shared_ptr<magma::PipelineLayout> teapotPipelineLayout;
+
+    std::shared_ptr<magma::DescriptorSetLayout> blurDescriptorSetLayout;
+    std::shared_ptr<magma::DescriptorSet> blurDescriptorSet;
+    std::shared_ptr<magma::PipelineLayout> blurPipelineLayout;
+
     std::shared_ptr<magma::GraphicsPipeline> checkerboardPipeline;
     std::shared_ptr<magma::GraphicsPipeline> teapotPipeline;
+    std::shared_ptr<magma::GraphicsPipeline> blurPipeline;
+
+    std::shared_ptr<magma::CommandBuffer> offscreenCommandBuffer;
+    std::shared_ptr<magma::Semaphore> offscreenSemaphore;
 
 public:
     BlurApp(HINSTANCE instance, HWND wnd, uint32_t width, uint32_t height):
@@ -41,6 +51,8 @@ public:
         createDescriptorSets();
         createCheckerboardPipeline();
         createTeapotPipeline();
+        createBlurPipeline();
+        recordOffscreenCommandBuffer();
         recordCommandBuffer(0);
         recordCommandBuffer(1);
         setupView();
@@ -49,7 +61,14 @@ public:
     void onRender(uint32_t bufferIndex) override
     {
         updatePerspectiveTransform();
-        submitCommandBuffer(bufferIndex);
+        queue->submit(offscreenCommandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            presentFinished, // Wait for swapchain
+            offscreenSemaphore,
+            nullptr);
+        queue->submit(commandBuffers[bufferIndex], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            offscreenSemaphore, // Wait for offscreen pass
+            renderFinished,
+            waitFences[bufferIndex]);
     }
 
 private:
@@ -86,8 +105,8 @@ private:
         fb.depth = std::make_shared<magma::DepthStencilAttachment2D>(device, depthFormat, extent, 1, 1);
         fb.depthView = std::make_shared<magma::ImageView>(fb.depth);
 
-        // Define that color attachment can be cleared, can store shader output and should be read-only image
-        const magma::AttachmentDescription colorAttachment(fb.color->getFormat(), 1, magma::attachments::colorClearStoreShaderReadOnly);
+        // Define that color attachment don't care about clear, can store shader output and should be read-only image
+        const magma::AttachmentDescription colorAttachment(fb.color->getFormat(), 1, magma::attachments::colorDontCareStoreShaderReadOnly);
         // Define that depth attachment can be cleared and can store shader output
         const magma::AttachmentDescription depthAttachment(fb.depth->getFormat(), 1, magma::attachments::depthClearStoreAttachment);
 
@@ -127,15 +146,26 @@ private:
     void createDescriptorSets()
     {
         constexpr magma::Descriptor oneUniformBuffer = magma::descriptors::UniformBuffer(1);
+        constexpr magma::Descriptor oneImageSampler = magma::descriptors::CombinedImageSampler(1);
 
-        constexpr uint32_t maxDescriptorSets = 1;
-        descriptorPool = std::make_shared<magma::DescriptorPool>(device, maxDescriptorSets, oneUniformBuffer);
+        constexpr uint32_t maxDescriptorSets = 2;
+        descriptorPool = std::shared_ptr<magma::DescriptorPool>(new magma::DescriptorPool(device, maxDescriptorSets,
+            {
+                oneUniformBuffer,
+                oneImageSampler
+            }));
 
         teapotDescriptorSetLayout = std::make_shared<magma::DescriptorSetLayout>(device,
             magma::bindings::VertexStageBinding(0, oneUniformBuffer));
-
         teapotDescriptorSet = descriptorPool->allocateDescriptorSet(teapotDescriptorSetLayout);
         teapotDescriptorSet->update(0, uniformTransform);
+        teapotPipelineLayout = std::make_shared<magma::PipelineLayout>(teapotDescriptorSetLayout);
+
+        blurDescriptorSetLayout = std::make_shared<magma::DescriptorSetLayout>(device,
+            magma::bindings::FragmentStageBinding(0, oneImageSampler));
+        blurDescriptorSet = descriptorPool->allocateDescriptorSet(blurDescriptorSetLayout);
+        blurDescriptorSet->update(0, fb.colorView, textureSampler);
+        blurPipelineLayout = std::make_shared<magma::PipelineLayout>(blurDescriptorSetLayout);
     }
 
     magma::PipelineShaderStage loadShader(const char *fileName) const
@@ -175,14 +205,13 @@ private:
                 VK_DYNAMIC_STATE_SCISSOR
             },
             nullptr,
-            renderPass, 0,
+            fb.renderPass, 0,
             pipelineCache,
             nullptr, nullptr, 0);
     }
 
     void createTeapotPipeline()
     {
-        teapotPipelineLayout = std::make_shared<magma::PipelineLayout>(teapotDescriptorSetLayout);
         teapotPipeline = std::make_shared<magma::GraphicsPipeline>(device,
             std::vector<magma::PipelineShaderStage>{
                 loadShader("shaders/transform.o"),
@@ -199,9 +228,62 @@ private:
                 VK_DYNAMIC_STATE_SCISSOR
             },
             teapotPipelineLayout,
+            fb.renderPass, 0,
+            pipelineCache,
+            nullptr, nullptr, 0);
+    }
+
+    void createBlurPipeline()
+    {
+
+        blurPipeline = std::make_shared<magma::GraphicsPipeline>(device,
+            std::vector<magma::PipelineShaderStage>{
+                loadShader("shaders/passthrough.o"),
+                loadShader("shaders/blur.o")
+            },
+            magma::renderstates::pos2f,
+            magma::renderstates::triangleStrip,
+            magma::renderstates::fillCullNoneCW,
+            magma::renderstates::dontMultisample,
+            magma::renderstates::depthAlwaysDontWrite,
+            magma::renderstates::dontBlendRgb,
+            std::initializer_list<VkDynamicState>{
+                VK_DYNAMIC_STATE_VIEWPORT,
+                VK_DYNAMIC_STATE_SCISSOR
+            },
+            blurPipelineLayout,
             renderPass, 0,
             pipelineCache,
             nullptr, nullptr, 0);
+    }
+
+    void recordOffscreenCommandBuffer()
+    {
+        offscreenSemaphore = std::make_shared<magma::Semaphore>(device);
+        offscreenCommandBuffer = std::make_shared<magma::PrimaryCommandBuffer>(commandPools[0]);
+        offscreenCommandBuffer->begin();
+        {
+            offscreenCommandBuffer->beginRenderPass(fb.renderPass, fb.framebuffer,
+                {
+                    // Only elements corresponding to cleared attachments are used. Other elements of pClearValues are ignored.
+                    magma::clears::blackColor,
+                    magma::clears::depthOne
+                });
+            {
+                offscreenCommandBuffer->setViewport(0, 0, width, height);
+                offscreenCommandBuffer->setScissor(0, 0, width, height);
+                // Draw checkerboard
+                offscreenCommandBuffer->bindPipeline(checkerboardPipeline);
+                offscreenCommandBuffer->bindVertexBuffer(0, quad);
+                offscreenCommandBuffer->draw(4, 0);
+                // Draw teapot mesh
+                offscreenCommandBuffer->bindDescriptorSet(teapotPipeline, teapotDescriptorSet);
+                offscreenCommandBuffer->bindPipeline(teapotPipeline);
+                mesh->draw(offscreenCommandBuffer);
+            }
+            offscreenCommandBuffer->endRenderPass();
+        }
+        offscreenCommandBuffer->end();
     }
 
     void recordCommandBuffer(uint32_t index)
@@ -209,22 +291,15 @@ private:
         std::shared_ptr<magma::CommandBuffer> cmdBuffer = commandBuffers[index];
         cmdBuffer->begin();
         {
-            cmdBuffer->beginRenderPass(renderPass, framebuffers[index],
-                {
-                    magma::clears::grayColor,
-                    magma::clears::depthOne
-                });
+            cmdBuffer->beginRenderPass(renderPass, framebuffers[index], {/* don't clear */});
             {
                 cmdBuffer->setViewport(0, 0, width, height);
                 cmdBuffer->setScissor(0, 0, width, height);
-                // Draw checkerboard
-                cmdBuffer->bindPipeline(checkerboardPipeline);
+                // Blur offscreen texture
+                cmdBuffer->bindDescriptorSet(blurPipeline, blurDescriptorSet);
+                cmdBuffer->bindPipeline(blurPipeline);
                 cmdBuffer->bindVertexBuffer(0, quad);
                 cmdBuffer->draw(4, 0);
-                // Draw teapot mesh
-                cmdBuffer->bindDescriptorSet(teapotPipeline, teapotDescriptorSet);
-                cmdBuffer->bindPipeline(teapotPipeline);
-                mesh->draw(cmdBuffer);
             }
             cmdBuffer->endRenderPass();
         }
