@@ -1,11 +1,16 @@
 #include "vkApp.h"
+#include "bezierMesh.h"
 
 class BlurApp : public VkApp
 {
+    std::unique_ptr<BezierPatchMesh> mesh;
+
 public:
     BlurApp(HINSTANCE instance, HWND wnd, uint32_t width, uint32_t height):
         VkApp(instance, wnd, width, height)
     {
+        createTeapotMesh();
+
         int i = 0;
         for (auto& cmdBuffer : commandBuffers)
         {
@@ -19,6 +24,14 @@ public:
             cmdBuffer->end();
             ++i;
         }
+    }
+
+private:
+    void createTeapotMesh()
+    {
+#       include "teapot.h"
+        constexpr uint32_t subdivisionDegree = 16;
+        mesh = std::make_unique<BezierPatchMesh>(teapotPatches, kTeapotNumPatches, teapotVertices, subdivisionDegree, cmdBufferCopy);
     }
 
     virtual void onRender(uint32_t bufferIndex) override
