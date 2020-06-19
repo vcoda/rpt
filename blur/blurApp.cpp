@@ -5,6 +5,7 @@
 class BlurApp : public VkApp
 {
     std::unique_ptr<BezierPatchMesh> mesh;
+    rapid::matrix viewProj;
 
     std::shared_ptr<magma::UniformBuffer<rapid::matrix>> uniformTransform;
     std::shared_ptr<magma::DescriptorPool> descriptorPool;
@@ -18,6 +19,7 @@ public:
     BlurApp(HINSTANCE instance, HWND wnd, uint32_t width, uint32_t height):
         VkApp(instance, wnd, width, height)
     {
+        setupView();
         createTeapotMesh();
         createUniformBuffers();
         createDescriptorSets();
@@ -39,6 +41,28 @@ public:
     }
 
 private:
+    void setupView()
+    {
+        const rapid::vector3 eye(0.f, 3.f, 8.f);
+        const rapid::vector3 center(0.f, 2.f, 0.f);
+        const rapid::vector3 up(0.f, 1.f, 0.f);
+        constexpr float fov = rapid::radians(60.f);
+        const float aspect = width/(float)height;
+        constexpr float zn = 1.f, zf = 100.f;
+        const rapid::matrix view = rapid::lookAtRH(eye, center, up);
+        const rapid::matrix proj = rapid::perspectiveFovRH(fov, aspect, zn, zf);
+        viewProj = view * proj;
+    }
+
+    void updatePerspectiveTransform()
+    {
+        const rapid::matrix world = rapid::identity();
+        magma::helpers::mapScoped<rapid::matrix>(uniformTransform, true, [this, &world](auto *worldViewProj)
+        {
+            *worldViewProj = world * viewProj;
+        });
+    }
+
     void createTeapotMesh()
     {
 #       include "teapot.h"
