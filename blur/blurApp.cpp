@@ -7,6 +7,9 @@ class BlurApp : public VkApp
     std::unique_ptr<BezierPatchMesh> mesh;
 
     std::shared_ptr<magma::UniformBuffer<rapid::matrix>> uniformTransform;
+    std::shared_ptr<magma::DescriptorPool> descriptorPool;
+    std::shared_ptr<magma::DescriptorSetLayout> teapotDescriptorSetLayout;
+    std::shared_ptr<magma::DescriptorSet> teapotDescriptorSet;
 
 public:
     BlurApp(HINSTANCE instance, HWND wnd, uint32_t width, uint32_t height):
@@ -14,6 +17,7 @@ public:
     {
         createTeapotMesh();
         createUniformBuffers();
+        createDescriptorSets();
 
         int i = 0;
         for (auto& cmdBuffer : commandBuffers)
@@ -41,6 +45,20 @@ private:
     void createUniformBuffers()
     {
         uniformTransform = std::make_shared<magma::UniformBuffer<rapid::matrix>>(device);
+    }
+
+    void createDescriptorSets()
+    {
+        constexpr magma::Descriptor oneUniformBuffer = magma::descriptors::UniformBuffer(1);
+
+        constexpr uint32_t maxDescriptorSets = 1;
+        descriptorPool = std::make_shared<magma::DescriptorPool>(device, maxDescriptorSets, oneUniformBuffer);
+
+        teapotDescriptorSetLayout = std::make_shared<magma::DescriptorSetLayout>(device,
+            magma::bindings::VertexStageBinding(0, oneUniformBuffer));
+
+        teapotDescriptorSet = descriptorPool->allocateDescriptorSet(teapotDescriptorSetLayout);
+        teapotDescriptorSet->update(0, uniformTransform);
     }
 
     magma::PipelineShaderStage loadShader(const char *fileName) const
