@@ -19,6 +19,8 @@ public:
 protected:
     virtual void onRender(uint32_t bufferIndex) = 0;
     bool submitCommandBuffer(uint32_t bufferIndex);
+    VkFormat getSupportedDepthFormat(std::shared_ptr<magma::PhysicalDevice> physicalDevice,
+        bool hasStencil, bool optimalTiling);
 
 private:
     void createInstance();
@@ -29,8 +31,6 @@ private:
     void createCommandBuffers();
     void createSyncPrimitives();
 
-    VkFormat getSupportedDepthFormat(std::shared_ptr<magma::PhysicalDevice> physicalDevice,
-        bool hasStencil, bool optimalTiling);
     static VkBool32 VKAPI_PTR reportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType,
         uint64_t object, size_t location, int32_t messageCode, const char *pLayerPrefix, const char *pMessage, void *pUserData);
 

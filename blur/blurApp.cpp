@@ -4,6 +4,16 @@
 
 class BlurApp : public VkApp
 {
+    struct Framebuffer
+    {
+        std::shared_ptr<magma::ColorAttachment2D> color;
+        std::shared_ptr<magma::ImageView> colorView;
+        std::shared_ptr<magma::DepthStencilAttachment2D> depth;
+        std::shared_ptr<magma::ImageView> depthView;
+        std::shared_ptr<magma::RenderPass> renderPass;
+        std::shared_ptr<magma::Framebuffer> framebuffer;
+    } fb;
+
     std::unique_ptr<BezierPatchMesh> mesh;
     rapid::matrix viewProj;
 
@@ -22,7 +32,7 @@ public:
     BlurApp(HINSTANCE instance, HWND wnd, uint32_t width, uint32_t height):
         VkApp(instance, wnd, width, height)
     {
-        setupView();
+        createFramebuffer();
         createQuadMesh();
         createTeapotMesh();
         createUniformBuffers();
@@ -31,6 +41,7 @@ public:
         createTeapotPipeline();
         recordCommandBuffer(0);
         recordCommandBuffer(1);
+        setupView();
     }
 
     void onRender(uint32_t bufferIndex) override
@@ -60,6 +71,30 @@ private:
         {
             *worldViewProj = world * viewProj;
         });
+    }
+
+    void createFramebuffer()
+    {
+        const VkExtent2D extent{width, height};
+        // Create color attachment
+        fb.color = std::make_shared<magma::ColorAttachment2D>(device, VK_FORMAT_R8G8B8A8_UNORM, extent, 1, 1);
+        fb.colorView = std::make_shared<magma::ImageView>(fb.color);
+        // Create depth attachment
+        const VkFormat depthFormat = getSupportedDepthFormat(physicalDevice, false, true);
+        fb.depth = std::make_shared<magma::DepthStencilAttachment2D>(device, depthFormat, extent, 1, 1);
+        fb.depthView = std::make_shared<magma::ImageView>(fb.depth);
+
+        // Define that color attachment can be cleared, can store shader output and should be read-only image
+        const magma::AttachmentDescription colorAttachment(fb.color->getFormat(), 1, magma::attachments::colorClearStoreShaderReadOnly);
+        // Define that depth attachment can be cleared and can store shader output
+        const magma::AttachmentDescription depthAttachment(fb.depth->getFormat(), 1, magma::attachments::depthClearStoreAttachment);
+
+        // Render pass defines attachment formats, load/store operations and final layouts
+        fb.renderPass = std::shared_ptr<magma::RenderPass>(new magma::RenderPass(
+            device, {colorAttachment, depthAttachment}));
+        // Framebuffer defines render pass, color/depth/stencil image views and dimensions
+        fb.framebuffer = std::shared_ptr<magma::Framebuffer>(new magma::Framebuffer(
+            fb.renderPass, {fb.colorView, fb.depthView}));
     }
 
     void createQuadMesh()
