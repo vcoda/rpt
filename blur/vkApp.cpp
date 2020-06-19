@@ -1,6 +1,5 @@
 #include <sstream>
 #include <fstream>
-#include <iostream>
 #include "vkApp.h"
 
 #ifndef _WIN64
@@ -79,7 +78,8 @@ void VkApp::createInstance()
 
     physicalDevice = instance->getPhysicalDevice(0);
     const VkPhysicalDeviceProperties& properties = physicalDevice->getProperties();
-    std::cout << "Running on " << properties.deviceName << "\n";
+    OutputDebugString(properties.deviceName);
+    OutputDebugString("\n");
 
     instanceExtensions = std::make_unique<magma::InstanceExtensions>();
     extensions = std::make_unique<magma::PhysicalDeviceExtensions>(physicalDevice);
@@ -238,7 +238,7 @@ void VkApp::createCommandBuffers()
     }
     catch (...)
     {
-        std::cout << "Transfer queue not present\n";
+        OutputDebugString("Transfer queue not present\n");
     }
 }
 
@@ -312,9 +312,6 @@ VkBool32 VKAPI_PTR VkApp::reportCallback(VkDebugReportFlagsEXT flags, VkDebugRep
         return VK_FALSE;
     std::stringstream msg;
     msg << "[" << pLayerPrefix << "] " << pMessage << "\n";
-    if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
-        std::cerr << msg.str();
-    else
-        std::cout << msg.str();
+    OutputDebugString(msg.str().c_str());
     return VK_FALSE;
 }
