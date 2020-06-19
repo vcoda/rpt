@@ -7,6 +7,8 @@ class BlurApp : public VkApp
     std::unique_ptr<BezierPatchMesh> mesh;
     rapid::matrix viewProj;
 
+    std::shared_ptr<magma::VertexBuffer> quad;
+
     std::shared_ptr<magma::UniformBuffer<rapid::matrix>> uniformTransform;
     std::shared_ptr<magma::DescriptorPool> descriptorPool;
     std::shared_ptr<magma::DescriptorSetLayout> teapotDescriptorSetLayout;
@@ -21,6 +23,7 @@ public:
         VkApp(instance, wnd, width, height)
     {
         setupView();
+        createQuadMesh();
         createTeapotMesh();
         createUniformBuffers();
         createDescriptorSets();
@@ -57,6 +60,14 @@ private:
         {
             *worldViewProj = world * viewProj;
         });
+    }
+
+    void createQuadMesh()
+    {
+        const std::vector<rapid::float2> vertices = {
+            {-1.f, -1.f}, {-1.f, 1.f}, {1.f, -1.f}, {1.f, 1.f}
+        };
+        quad = std::make_shared<magma::VertexBuffer>(cmdBufferCopy, vertices);
     }
 
     void createTeapotMesh()
@@ -164,6 +175,11 @@ private:
             {
                 cmdBuffer->setViewport(0, 0, width, height);
                 cmdBuffer->setScissor(0, 0, width, height);
+                // Draw checkerboard
+                cmdBuffer->bindPipeline(checkerboardPipeline);
+                cmdBuffer->bindVertexBuffer(0, quad);
+                cmdBuffer->draw(4, 0);
+                // Draw teapot mesh
                 cmdBuffer->bindDescriptorSet(teapotPipeline, teapotDescriptorSet);
                 cmdBuffer->bindPipeline(teapotPipeline);
                 mesh->draw(cmdBuffer);
