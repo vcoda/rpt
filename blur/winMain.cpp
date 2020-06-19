@@ -1,5 +1,6 @@
 #include <memory>
 #include <string>
+#include <sstream>
 #include "vkApp.h"
 
 std::unique_ptr<VkApp> createVulkanApp(HINSTANCE, HWND, uint32_t, uint32_t);
@@ -39,6 +40,42 @@ void showWindow(HWND wnd, DWORD style, LONG width, LONG height)
         y = (desktopRect.bottom - cy) / 2;
     }
     SetWindowPos(wnd, HWND_TOP, x, y, cx, cy, SWP_SHOWWINDOW);
+}
+
+std::unique_ptr<VkApp> createAppInstance(HINSTANCE instance, HWND wnd, uint32_t width, uint32_t height)
+{
+    try
+    {
+        return createVulkanApp(instance, wnd, width, height);
+    }
+    catch (const magma::exception::ErrorResult& exc)
+    {
+        std::ostringstream msg;
+        msg << exc.location().file_name() << "(" << exc.location().line() << "):" << std::endl
+            << std::endl
+            << magma::helpers::stringize(exc.error()) << std::endl
+            << exc.what();
+        onError(msg.str(), "Vulkan");
+    }
+    catch (const magma::exception::Exception& exc)
+    {
+        std::ostringstream msg;
+        msg << exc.location().file_name() << "(" << exc.location().line() << "):" << std::endl
+            << "Error: " << exc.what();
+        onError(msg.str(), "Magma");
+    }
+    catch (const std::exception& exc)
+    {
+        std::ostringstream msg;
+        msg << "Error: " << exc.what() << std::endl;
+        onError(msg.str(), "Error");
+    }
+    catch (...)
+    {
+        onError("unknown exception", "Unknown");
+    }
+
+    return nullptr;
 }
 
 LRESULT WINAPI wndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -88,26 +125,30 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
         NULL, NULL, wc.hInstance, NULL);
 
     showWindow(wnd, style, width, height);
-    vkApp = createVulkanApp(hInstance, wnd, width, height);
+    vkApp = createAppInstance(hInstance, wnd, width, height);
 
-    while (!quit)
+    if (vkApp)
     {
-        MSG msg;
-        if (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE))
+        while (!quit)
         {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-        else
-        {
-            if (!IsIconic(wnd))
+            MSG msg;
+            if (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE))
             {
-                vkApp->render();
+                TranslateMessage(&msg);
+                DispatchMessage(&msg);
+            }
+            else
+            {
+                if (!IsIconic(wnd))
+                {
+                    vkApp->render();
+                }
             }
         }
+
+        vkApp.reset();
     }
 
-    vkApp.reset();
     DestroyWindow(wnd);
     UnregisterClass(className, hInstance);
     return 0;
