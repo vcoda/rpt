@@ -227,7 +227,7 @@ private:
         });
         // Setup texture data description
         const VkFormat format = bcFormat(ctx);
-        const VkExtent2D extent = {ctx.image_width(0, 0), ctx.image_height(0, 0)};
+        const VkExtent2D extent = {static_cast<uint32_t>(ctx.image_width(0, 0)), static_cast<uint32_t>(ctx.image_height(0, 0))};
         magma::Image::MipmapLayout mipOffsets(1, 0);
         for (int level = 1; level < ctx.num_mipmaps(0); ++level)
         {   // Compute relative offset
