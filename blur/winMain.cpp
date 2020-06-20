@@ -83,6 +83,8 @@ LRESULT WINAPI wndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     switch (msg)
     {
     case WM_KEYDOWN:
+        if (VK_ESCAPE == wParam)
+            quit = true;
         break;
     case WM_KEYUP:
         break;
