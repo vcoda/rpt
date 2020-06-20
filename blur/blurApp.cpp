@@ -41,6 +41,7 @@ class BlurApp : public VkApp
 
     std::shared_ptr<magma::GraphicsPipeline> checkerboardPipeline;
     std::shared_ptr<magma::GraphicsPipeline> teapotPipeline;
+    std::shared_ptr<magma::GraphicsPipeline> blitPipeline;
     std::shared_ptr<magma::GraphicsPipeline> blurPipeline;
 
     std::shared_ptr<magma::CommandBuffer> offscreenCommandBuffer;
@@ -59,6 +60,7 @@ public:
         createDescriptorSets();
         createCheckerboardPipeline();
         createTeapotPipeline();
+        createBlitPipeline();
         createBlurPipeline();
         recordOffscreenCommandBuffer();
         recordCommandBuffer(0);
@@ -279,9 +281,31 @@ private:
             nullptr, nullptr, 0);
     }
 
+    void createBlitPipeline()
+    {
+        blitPipeline = std::make_shared<magma::GraphicsPipeline>(device,
+            std::vector<magma::PipelineShaderStage>{
+                loadShader("shaders/passthrough.o"),
+                loadShader("shaders/blit.o")
+            },
+            magma::renderstates::pos2f,
+            magma::renderstates::triangleStrip,
+            magma::renderstates::fillCullNoneCW,
+            magma::renderstates::dontMultisample,
+            magma::renderstates::depthAlwaysDontWrite,
+            magma::renderstates::dontBlendRgb,
+            std::initializer_list<VkDynamicState>{
+                VK_DYNAMIC_STATE_VIEWPORT,
+                VK_DYNAMIC_STATE_SCISSOR
+            },
+            blurPipelineLayout,
+            renderPass, 0,
+            pipelineCache,
+            nullptr, nullptr, 0);
+    }
+
     void createBlurPipeline()
     {
-
         blurPipeline = std::make_shared<magma::GraphicsPipeline>(device,
             std::vector<magma::PipelineShaderStage>{
                 loadShader("shaders/passthrough.o"),
@@ -334,18 +358,27 @@ private:
 
     void recordCommandBuffer(uint32_t index)
     {
+        const uint32_t halfWidth = width >> 1;
+
         std::shared_ptr<magma::CommandBuffer> cmdBuffer = commandBuffers[index];
         cmdBuffer->begin();
         {
             cmdBuffer->beginRenderPass(renderPass, framebuffers[index], {/* don't clear */});
             {
                 cmdBuffer->setViewport(0, 0, width, height);
-                cmdBuffer->setScissor(0, 0, width, height);
-                // Blur offscreen texture
+                cmdBuffer->bindVertexBuffer(0, quad);
+
+                // Blit left half of the screen
+                cmdBuffer->setScissor(0, 0, halfWidth, height);
+                cmdBuffer->bindDescriptorSet(blitPipeline, blurDescriptorSet);
+                cmdBuffer->bindPipeline(blitPipeline);
+                cmdBuffer->draw(4);
+
+                // Blur right half of the screen
+                cmdBuffer->setScissor(halfWidth, 0, width, height);
                 cmdBuffer->bindDescriptorSet(blurPipeline, blurDescriptorSet);
                 cmdBuffer->bindPipeline(blurPipeline);
-                cmdBuffer->bindVertexBuffer(0, quad);
-                cmdBuffer->draw(4, 0);
+                cmdBuffer->draw(4);
             }
             cmdBuffer->endRenderPass();
         }
