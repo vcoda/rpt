@@ -87,8 +87,8 @@ public:
 private:
     void setupView()
     {
-        const rapid::vector3 eye(0.f, 3.f, 8.f);
-        const rapid::vector3 center(0.f, 2.f, 0.f);
+        const rapid::vector3 eye(0.f, 0.f, 8.f);
+        const rapid::vector3 center(0.f, 0.f, 0.f);
         const rapid::vector3 up(0.f, 1.f, 0.f);
         constexpr float fov = rapid::radians(60.f);
         const float aspect = width/(float)height;
