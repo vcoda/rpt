@@ -10,10 +10,6 @@ layout(location = 0) out vec4 oColor;
 void main()
 {
     vec2 checker = mod(gl_FragCoord.xy, SIZE * 2.);
-    bool fill;
-    if (checker.x < SIZE.x)
-        fill = (checker.y > SIZE.y);
-    else
-        fill = (checker.y < SIZE.y);
-    oColor = fill ? FILL_COLOR : BG_COLOR;
+    bvec2 b = lessThan(checker, SIZE);
+    oColor = (b.x ^^ b.y) ? FILL_COLOR : BG_COLOR;
 }
