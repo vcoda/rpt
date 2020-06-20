@@ -100,13 +100,20 @@ private:
 
     void updatePerspectiveTransform()
     {
-        const rapid::matrix world = rapid::identity();
+        static float angle = 0.f;
+
         // Compute elapsed milliseconds
         const auto curTime = std::chrono::high_resolution_clock::now();
         const auto mcs = std::chrono::duration_cast<std::chrono::microseconds>(curTime - oldTime);
         const float ms = static_cast<float>(mcs.count()) * 0.001f;
         oldTime = curTime;
 
+        angle += rapid::radians(ms * 0.05f);
+        const rapid::matrix pitch = rapid::rotationX(angle);
+        const rapid::matrix yaw = rapid::rotationY(angle);
+        const rapid::matrix roll = rapid::rotationZ(angle);
+        const rapid::matrix offset = rapid::translation(0.f, -1.5f, 0.f);
+        const rapid::matrix world = offset * pitch * yaw * roll;
         magma::helpers::mapScoped<rapid::matrix>(uniformTransform, true, [this, &world](auto *worldViewProj)
         {
             *worldViewProj = world * viewProj;
