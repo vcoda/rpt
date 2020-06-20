@@ -157,7 +157,7 @@ private:
 
         magma::helpers::mapScoped<Transforms>(uniformTransform, true, [this, &normal, &world, &worldView](auto *transforms)
         {
-            transforms->normal = normal;
+            transforms->normal = normal; // Normal matrix used to transform objects-space normal in view space
             transforms->view = this->view;
             transforms->worldView = worldView;
             transforms->worldViewProj = world * this->viewProj;
@@ -259,11 +259,12 @@ private:
     void createUniformBuffers()
     {
         uniformTransform = std::make_shared<magma::UniformBuffer<Transforms>>(device);
-        uniformMaterials = std::make_shared<magma::UniformBuffer<Material>>(device, 2);
+        uniformMaterials = std::make_shared<magma::UniformBuffer<Material>>(device, 2); // Allocate two materials
     }
 
     void createTextureSampler()
     {
+        // Create trilinear sampler
         textureSampler = std::make_shared<magma::Sampler>(device, magma::samplers::magMinMipLinearClampToEdge);
     }
 
@@ -279,6 +280,7 @@ private:
                 magma::descriptors::CombinedImageSampler(2)
             }));
 
+        // Create pipeline layout for teapot drawing
         teapotDescriptorSetLayout = std::make_shared<magma::DescriptorSetLayout>(device,
             std::initializer_list<magma::DescriptorSetLayout::Binding>{
                 magma::bindings::VertexFragmentStageBinding(0, oneUniformBuffer),
@@ -291,6 +293,7 @@ private:
         teapotDescriptorSet->update(2, texture.imageView, textureSampler);
         teapotPipelineLayout = std::make_shared<magma::PipelineLayout>(teapotDescriptorSetLayout);
 
+        // Create pipeline layout for blur post-effect
         blurDescriptorSetLayout = std::make_shared<magma::DescriptorSetLayout>(device,
             magma::bindings::FragmentStageBinding(0, oneImageSampler));
         blurDescriptorSet = descriptorPool->allocateDescriptorSet(blurDescriptorSetLayout);
