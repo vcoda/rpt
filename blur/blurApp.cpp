@@ -124,7 +124,7 @@ private:
 
     void setupView()
     {
-        const rapid::vector3 eye(0.f, 0.f, 8.f);
+        const rapid::vector3 eye(0.f, 1.f, 7.f);
         const rapid::vector3 center(0.f, 0.f, 0.f);
         const rapid::vector3 up(0.f, 1.f, 0.f);
         constexpr float fov = rapid::radians(60.f);
@@ -145,7 +145,7 @@ private:
         const float ms = static_cast<float>(mcs.count()) * 0.001f;
         oldTime = curTime;
 
-        angle += rapid::radians(ms * 0.05f);
+        angle += rapid::radians(ms * 0.03f);
         const rapid::matrix pitch = rapid::rotationX(angle);
         const rapid::matrix yaw = rapid::rotationY(angle);
         const rapid::matrix roll = rapid::rotationZ(angle);
