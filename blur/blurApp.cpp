@@ -22,13 +22,22 @@ class BlurApp : public VkApp
         std::shared_ptr<magma::ImageView> imageView;
     } texture;
 
+    struct Transforms
+    {
+        rapid::matrix normal;
+        rapid::matrix view;
+        rapid::matrix worldView;
+        rapid::matrix worldViewProj;
+    };
+
     std::unique_ptr<BezierPatchMesh> mesh;
+    rapid::matrix view;
     rapid::matrix viewProj;
     std::chrono::high_resolution_clock::time_point oldTime;
 
     std::shared_ptr<magma::VertexBuffer> quad;
 
-    std::shared_ptr<magma::UniformBuffer<rapid::matrix>> uniformTransform;
+    std::shared_ptr<magma::UniformBuffer<Transforms>> uniformTransform;
     std::shared_ptr<magma::Sampler> textureSampler;
 
     std::shared_ptr<magma::DescriptorPool> descriptorPool;
@@ -93,8 +102,8 @@ private:
         constexpr float fov = rapid::radians(60.f);
         const float aspect = width/(float)height;
         constexpr float zn = 1.f, zf = 100.f;
-        const rapid::matrix view = rapid::lookAtRH(eye, center, up);
         const rapid::matrix proj = rapid::perspectiveFovRH(fov, aspect, zn, zf);
+        view = rapid::lookAtRH(eye, center, up);
         viewProj = view * proj;
     }
 
@@ -114,9 +123,16 @@ private:
         const rapid::matrix roll = rapid::rotationZ(angle);
         const rapid::matrix offset = rapid::translation(0.f, -1.5f, 0.f);
         const rapid::matrix world = offset * pitch * yaw * roll;
-        magma::helpers::mapScoped<rapid::matrix>(uniformTransform, true, [this, &world](auto *worldViewProj)
+        const rapid::matrix worldView = world * view;
+        const rapid::matrix worldViewInv = rapid::inverse(worldView);
+        const rapid::matrix normal = rapid::transpose(worldViewInv);
+
+        magma::helpers::mapScoped<Transforms>(uniformTransform, true, [this, &normal, &world, &worldView](auto *transforms)
         {
-            *worldViewProj = world * viewProj;
+            transforms->normal = normal;
+            transforms->view = this->view;
+            transforms->worldView = worldView;
+            transforms->worldViewProj = world * this->viewProj;
         });
     }
 
@@ -214,7 +230,7 @@ private:
 
     void createUniformBuffers()
     {
-        uniformTransform = std::make_shared<magma::UniformBuffer<rapid::matrix>>(device);
+        uniformTransform = std::make_shared<magma::UniformBuffer<Transforms>>(device);
     }
 
     void createTextureSampler()
