@@ -30,6 +30,14 @@ class BlurApp : public VkApp
         rapid::matrix worldViewProj;
     };
 
+    struct alignas(16) Material
+    {
+        rapid::float4 ambient;
+        rapid::float4 diffuse;
+        rapid::float3 specular;
+        float shininess;
+    };
+
     std::unique_ptr<BezierPatchMesh> mesh;
     rapid::matrix view;
     rapid::matrix viewProj;
@@ -38,6 +46,7 @@ class BlurApp : public VkApp
     std::shared_ptr<magma::VertexBuffer> quad;
 
     std::shared_ptr<magma::UniformBuffer<Transforms>> uniformTransform;
+    std::shared_ptr<magma::UniformBuffer<Material>> uniformMaterials;
     std::shared_ptr<magma::Sampler> textureSampler;
 
     std::shared_ptr<magma::DescriptorPool> descriptorPool;
@@ -76,6 +85,7 @@ public:
         recordOffscreenCommandBuffer();
         recordCommandBuffer(0);
         recordCommandBuffer(1);
+        setupMaterials();
         setupView();
         oldTime = std::chrono::high_resolution_clock::now();
     }
@@ -94,6 +104,24 @@ public:
     }
 
 private:
+    void setupMaterials()
+    {
+        magma::helpers::mapScoped<Material>(uniformMaterials, true, [this](auto *materials)
+        {
+            constexpr int light = 0;
+            constexpr int surface = 1;
+
+            materials[light].ambient = rapid::float4(0.25f, 0.25f, 0.25f, 0.f);
+            materials[light].diffuse = rapid::float4(1.0f, 0.9f, 0.8f, 0.f);
+            materials[light].specular = rapid::float3(1.0f, 0.8f, 0.5f);
+
+            materials[surface].ambient = rapid::float4(0.25f, 0.25f, 0.25f, 0.f);
+            materials[surface].diffuse = rapid::float4(1.f, 1.f, 1.f, 0.f);
+            materials[surface].specular = rapid::float3(1.f, 1.f, 1.f);
+            materials[surface].shininess = 4.0f; // Metallic
+        });
+    }
+
     void setupView()
     {
         const rapid::vector3 eye(0.f, 0.f, 8.f);
@@ -231,6 +259,7 @@ private:
     void createUniformBuffers()
     {
         uniformTransform = std::make_shared<magma::UniformBuffer<Transforms>>(device);
+        uniformMaterials = std::make_shared<magma::UniformBuffer<Material>>(device, 2);
     }
 
     void createTextureSampler()
@@ -246,18 +275,20 @@ private:
         constexpr uint32_t maxDescriptorSets = 2;
         descriptorPool = std::shared_ptr<magma::DescriptorPool>(new magma::DescriptorPool(device, maxDescriptorSets,
             {
-                oneUniformBuffer,
+                magma::descriptors::UniformBuffer(2),
                 magma::descriptors::CombinedImageSampler(2)
             }));
 
         teapotDescriptorSetLayout = std::make_shared<magma::DescriptorSetLayout>(device,
             std::initializer_list<magma::DescriptorSetLayout::Binding>{
-                magma::bindings::VertexStageBinding(0, oneUniformBuffer),
-                magma::bindings::FragmentStageBinding(1, oneImageSampler)
+                magma::bindings::VertexFragmentStageBinding(0, oneUniformBuffer),
+                magma::bindings::FragmentStageBinding(1, oneUniformBuffer),
+                magma::bindings::FragmentStageBinding(2, oneImageSampler)
             });
         teapotDescriptorSet = descriptorPool->allocateDescriptorSet(teapotDescriptorSetLayout);
         teapotDescriptorSet->update(0, uniformTransform);
-        teapotDescriptorSet->update(1, texture.imageView, textureSampler);
+        teapotDescriptorSet->update(1, uniformMaterials);
+        teapotDescriptorSet->update(2, texture.imageView, textureSampler);
         teapotPipelineLayout = std::make_shared<magma::PipelineLayout>(teapotDescriptorSetLayout);
 
         blurDescriptorSetLayout = std::make_shared<magma::DescriptorSetLayout>(device,

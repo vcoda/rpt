@@ -2,6 +2,14 @@
 
 #define LIGHT_POS vec4(-3., 3., 5., 1.)
 
+struct Material
+{
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+    float shininess;
+};
+
 layout(location = 0) in vec3 viewPos;
 layout(location = 1) in vec3 viewNormal;
 layout(location = 2) in vec2 texCoord;
@@ -14,7 +22,14 @@ layout(binding = 0) uniform Transforms
     mat4 worldView;
     mat4 worldViewProj;
 };
-layout(binding = 1) uniform sampler2D diffuse;
+
+layout(binding = 1) uniform Materials
+{
+    Material light;
+    Material surface;
+};
+
+layout(binding = 2) uniform sampler2D diffuse;
 
 vec3 phong(vec3 N, vec3 L, vec3 V,
            vec3 Ka, vec3 Ia,
@@ -30,15 +45,7 @@ vec3 phong(vec3 N, vec3 L, vec3 V,
 
 void main()
 {
-    vec3 lightAmbient = vec3(0.25);
-    vec3 lightDiffuse = vec3(1.0, 0.9, 0.8);
-    vec3 lightSpecular = vec3(1.0);
-
-    vec3 matDiffuse = texture(diffuse, texCoord).rgb;
-    vec3 matSpecular = matDiffuse;
-    float matAmbient = 0.25;
-    float matShininess = 4.; // Metallic
-
+    vec3 diffuse = texture(diffuse, texCoord).rgb;
     vec3 lightViewPos = (view * LIGHT_POS).xyz;
 
     vec3 N = normalize(viewNormal);
@@ -46,9 +53,9 @@ void main()
     vec3 V = normalize(-viewPos); // view position at (0,0,0)
 
     vec3 color = phong(N, L, V,
-        lightAmbient, matDiffuse * matAmbient,
-        lightDiffuse, matDiffuse.rgb,
-        lightSpecular, matSpecular,
-        matShininess);
+        light.ambient, surface.ambient * diffuse,
+        light.diffuse, surface.diffuse * diffuse,
+        light.specular, surface.specular,
+        surface.shininess);
     oColor = vec4(color, 1.);
 }
