@@ -22,7 +22,7 @@ class BlurApp : public VkApp
         std::shared_ptr<magma::ImageView> imageView;
     } texture;
 
-    struct Transforms
+    struct alignas(16) Transforms
     {
         rapid::matrix normal;
         rapid::matrix view;
