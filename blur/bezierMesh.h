@@ -4,7 +4,7 @@
 class BezierPatchMesh
 {
 public:
-    BezierPatchMesh(const uint32_t patches[][16],
+    explicit BezierPatchMesh(const uint32_t patches[][16],
         const uint32_t numPatches,
         const float patchVertices[][3],
         const uint32_t subdivisionDegree,

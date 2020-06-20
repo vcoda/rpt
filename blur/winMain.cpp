@@ -12,9 +12,7 @@ bool quit = false;
 
 void onError(const std::string& msg, const char *caption)
 {
-    MessageBox(NULL,
-        msg.c_str(), caption,
-        MB_ICONHAND);
+    MessageBox(nullptr, msg.c_str(), caption, MB_ICONERROR);
 }
 
 void showWindow(HWND wnd, DWORD style, LONG width, LONG height)
@@ -115,8 +113,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
     // Register window class
     const WNDCLASSEX wc = {
         sizeof(WNDCLASSEX), CS_CLASSDC, wndProc, 0, 0, hInstance,
-        NULL, LoadCursor(NULL, IDC_ARROW),
-        NULL, NULL, className, NULL
+        nullptr, LoadCursor(NULL, IDC_ARROW),
+        nullptr, nullptr, className, nullptr
     };
     RegisterClassEx(&wc);
 
@@ -124,17 +122,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
     const DWORD style = WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
     HWND wnd = CreateWindow(wc.lpszClassName, "Render Programmer Test", style,
         0, 0, width, height,
-        NULL, NULL, wc.hInstance, NULL);
+        nullptr, nullptr, wc.hInstance, nullptr);
 
     showWindow(wnd, style, width, height);
-    vkApp = createAppInstance(hInstance, wnd, width, height);
 
+    vkApp = createAppInstance(hInstance, wnd, width, height);
     if (vkApp)
     {
         while (!quit)
         {
             MSG msg;
-            if (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE))
+            if (PeekMessage(&msg, nullptr, 0U, 0U, PM_REMOVE))
             {
                 TranslateMessage(&msg);
                 DispatchMessage(&msg);
@@ -142,15 +140,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
             else
             {
                 if (!IsIconic(wnd))
-                {
                     vkApp->render();
-                }
             }
         }
-
-        vkApp.reset();
     }
 
+    vkApp.reset();
     DestroyWindow(wnd);
     UnregisterClass(className, hInstance);
     return 0;

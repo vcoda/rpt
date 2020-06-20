@@ -44,17 +44,14 @@ class BlurApp : public VkApp
     std::chrono::high_resolution_clock::time_point oldTime;
 
     std::shared_ptr<magma::VertexBuffer> quad;
-
     std::shared_ptr<magma::UniformBuffer<Transforms>> uniformTransform;
     std::shared_ptr<magma::UniformBuffer<Material>> uniformMaterials;
     std::shared_ptr<magma::Sampler> textureSampler;
 
     std::shared_ptr<magma::DescriptorPool> descriptorPool;
-
     std::shared_ptr<magma::DescriptorSetLayout> teapotDescriptorSetLayout;
     std::shared_ptr<magma::DescriptorSet> teapotDescriptorSet;
     std::shared_ptr<magma::PipelineLayout> teapotPipelineLayout;
-
     std::shared_ptr<magma::DescriptorSetLayout> blurDescriptorSetLayout;
     std::shared_ptr<magma::DescriptorSet> blurDescriptorSet;
     std::shared_ptr<magma::PipelineLayout> blurPipelineLayout;
@@ -68,7 +65,7 @@ class BlurApp : public VkApp
     std::shared_ptr<magma::Semaphore> offscreenSemaphore;
 
 public:
-    BlurApp(HINSTANCE instance, HWND wnd, uint32_t width, uint32_t height):
+    explicit BlurApp(HINSTANCE instance, HWND wnd, uint32_t width, uint32_t height):
         VkApp(instance, wnd, width, height)
     {
         createFramebuffer();

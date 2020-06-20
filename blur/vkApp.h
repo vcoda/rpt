@@ -11,7 +11,7 @@ public:
     void operator delete(void *ptr) noexcept;
 #endif
 
-    VkApp(HINSTANCE instance, HWND wnd, uint32_t width, uint32_t height);
+    explicit VkApp(HINSTANCE instance, HWND wnd, uint32_t width, uint32_t height);
     virtual ~VkApp();
     void render();
     virtual void onKeyDown(char key, int repeat, uint32_t flags);
@@ -19,7 +19,6 @@ public:
 protected:
     virtual void onRender(uint32_t bufferIndex) = 0;
     magma::PipelineShaderStage loadShader(const char *fileName) const;
-    bool submitCommandBuffer(uint32_t bufferIndex);
     VkFormat getSupportedDepthFormat(std::shared_ptr<magma::PhysicalDevice> physicalDevice,
         bool hasStencil, bool optimalTiling);
 

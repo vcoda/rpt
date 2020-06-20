@@ -95,12 +95,9 @@ void VkApp::createLogicalDevice()
     if (transferQueue.queueFamilyIndex != graphicsQueue.queueFamilyIndex)
         queueDescriptors.push_back(transferQueue);
 
-    // Enable some widely used features
+    // Enable BC textures
     VkPhysicalDeviceFeatures features = {0};
-    features.fillModeNonSolid = VK_TRUE;
-    features.samplerAnisotropy = VK_TRUE;
     features.textureCompressionBC = VK_TRUE;
-    features.occlusionQueryPrecise = VK_TRUE;
 
     std::vector<const char*> enabledExtensions;
     enabledExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
@@ -293,15 +290,6 @@ magma::PipelineShaderStage VkApp::loadShader(const char *fileName) const
     const VkShaderStageFlagBits stage = module->getReflection()->getShaderStage();
     const char *const entrypoint = module->getReflection()->getEntryPointName(0);
     return magma::PipelineShaderStage(stage, std::move(module), entrypoint);
-}
-
-bool VkApp::submitCommandBuffer(uint32_t bufferIndex)
-{
-    return queue->submit(commandBuffers[bufferIndex],
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-        presentFinished,
-        renderFinished,
-        waitFences[bufferIndex]);
 }
 
 VkBool32 VKAPI_PTR VkApp::reportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType,
