@@ -63,7 +63,7 @@ public:
         VkApp(instance, wnd, width, height)
     {
         createFramebuffer();
-        loadTexture("textures/brick.dds");
+        loadTexture("textures/stonewall.dds");
         createQuadMesh();
         createTeapotMesh();
         createUniformBuffers();
@@ -235,7 +235,7 @@ private:
 
     void createTextureSampler()
     {
-        textureSampler = std::make_shared<magma::Sampler>(device, magma::samplers::magMinMipNearestClampToEdge);
+        textureSampler = std::make_shared<magma::Sampler>(device, magma::samplers::magMinMipLinearClampToEdge);
     }
 
     void createDescriptorSets()

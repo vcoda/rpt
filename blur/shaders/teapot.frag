@@ -30,13 +30,13 @@ vec3 phong(vec3 N, vec3 L, vec3 V,
 
 void main()
 {
-    vec3 lightAmbient = vec3(0.1);
-    vec3 lightDiffuse = vec3(0.8, 0.7, 0.5);
+    vec3 lightAmbient = vec3(0.25);
+    vec3 lightDiffuse = vec3(1.0, 0.9, 0.8);
     vec3 lightSpecular = vec3(1.0);
 
-    vec3 matDiffuse = vec3(239., 228.0, 176.0) / 255.;
+    vec3 matDiffuse = texture(diffuse, texCoord).rgb;
     vec3 matSpecular = matDiffuse;
-    float matAmbient = 0.1;
+    float matAmbient = 0.25;
     float matShininess = 4.; // Metallic
 
     vec3 lightViewPos = (view * LIGHT_POS).xyz;
