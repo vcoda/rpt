@@ -1,4 +1,5 @@
 #include <fstream>
+#include <chrono>
 #include "vkApp.h"
 #include "bezierMesh.h"
 #include "../gliml/gliml.h"
@@ -23,6 +24,7 @@ class BlurApp : public VkApp
 
     std::unique_ptr<BezierPatchMesh> mesh;
     rapid::matrix viewProj;
+    std::chrono::high_resolution_clock::time_point oldTime;
 
     std::shared_ptr<magma::VertexBuffer> quad;
 
@@ -66,6 +68,7 @@ public:
         recordCommandBuffer(0);
         recordCommandBuffer(1);
         setupView();
+        oldTime = std::chrono::high_resolution_clock::now();
     }
 
     void onRender(uint32_t bufferIndex) override
@@ -98,6 +101,12 @@ private:
     void updatePerspectiveTransform()
     {
         const rapid::matrix world = rapid::identity();
+        // Compute elapsed milliseconds
+        const auto curTime = std::chrono::high_resolution_clock::now();
+        const auto mcs = std::chrono::duration_cast<std::chrono::microseconds>(curTime - oldTime);
+        const float ms = static_cast<float>(mcs.count()) * 0.001f;
+        oldTime = curTime;
+
         magma::helpers::mapScoped<rapid::matrix>(uniformTransform, true, [this, &world](auto *worldViewProj)
         {
             *worldViewProj = world * viewProj;
